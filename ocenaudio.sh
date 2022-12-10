@@ -10,6 +10,7 @@ mkdir ocenaudio.AppDir
 mv ./tmp/opt/ocenaudio/* ./ocenaudio.AppDir
 cp ./tmp/usr/share/icons/hicolor/128x128/apps/ocenaudio.png ./ocenaudio.AppDir/
 cp ./tmp/usr/share/applications/ocenaudio.desktop ./ocenaudio.AppDir/
+sed -i "s#Exec=/opt/ocenaudio/bin/ocenaudio#Exec=ocenaudio#g" ./ocenaudio.AppDir/ocenaudio.desktop
 cat >> ./ocenaudio.AppDir/AppRun << 'EOF'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "${0}")")"
