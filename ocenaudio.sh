@@ -21,7 +21,7 @@ export UNION_PRELOAD="${HERE}"
 export QT_FONT_DPI=96
 export QT_QPA_PLATFORMTHEME=$QT_QPA_PLATFORMTHEME
 export PATH="${HERE}"/bin/:"${PATH}"
-export LD_LIBRARY_PATH="${HERE}"/lib/:"${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH=/lib/:/lib64/:/lib/x86_64-linux-gnu/:/usr/lib/:"${HERE}"/lib/:"${LD_LIBRARY_PATH}"
 case "$1" in
 	'') exec ${HERE}/bin/ocenaudio;;
 	*) exec ${HERE}/bin/ocenvst "$*";;
