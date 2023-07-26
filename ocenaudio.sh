@@ -18,7 +18,7 @@ cat >> ./ocenaudio.AppDir/AppRun << 'EOF'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "${0}")")"
 export UNION_PRELOAD="${HERE}"
-export LD_PRELOAD=/usr/lib/libbz2.so.1:/lib/x86_64-linux-gnu/libbz2.so.1.0
+export LD_PRELOAD=$(cd / && find . -name "libbz2*" 2>/dev/null | head -1 | cut -c 2-)
 export QT_FONT_DPI=96
 export QT_QPA_PLATFORMTHEME=$QT_QPA_PLATFORMTHEME
 export PATH="${HERE}"/bin/:"${PATH}"
