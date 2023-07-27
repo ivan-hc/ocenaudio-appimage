@@ -18,7 +18,7 @@ jobs:
       run: |
         sudo apt update && sudo apt install libfuse2
         wget https://raw.githubusercontent.com/ivan-hc/ocenaudio-appimage/main/ocenaudio.sh
-        https://raw.githubusercontent.com/ivan-hc/ocenaudio-appimage/main/ocenaudio-bin-junest.sh
+        wget https://raw.githubusercontent.com/ivan-hc/ocenaudio-appimage/main/ocenaudio-bin-junest.sh
         chmod a+x ./ocenaudio.sh ./ocenaudio-bin-junest.sh
         ./ocenaudio.sh
         ./ocenaudio-bin-junest.sh
