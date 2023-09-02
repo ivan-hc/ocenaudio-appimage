@@ -11,8 +11,8 @@ BASICSTUFF="binutils gzip"
 for REPO in { "core" "extra" "community" "multilib" }; do
 echo "$(wget -q https://archlinux.org/packages/$REPO/x86_64/$APP/flag/ -O - | grep $APP | grep details | head -1 | grep -o -P '(?<=/a> ).*(?= )' | grep -o '^\S*')" >> version
 done
-VERSION=$(cat ./version | grep -w -v "" | head -1)
-VERSIONAUR=$(wget -q https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$APP -O - | grep pkgver | head -1 | cut -c 8-)
+VERSION=$(wget -q https://builds.garudalinux.org/repos/chaotic-aur/logs/ocenaudio-bin.log -O - | grep 'ocenaudio ' | tail -1 | cut -c 11-)
+#VERSIONAUR=$(wget -q https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$APP -O - | grep pkgver | head -1 | cut -c 8-)
 
 # THIS WILL DO ALL WORK INTO THE CURRENT DIRECTORY
 HOME="$(dirname "$(readlink -f $0)")" 
@@ -21,10 +21,18 @@ HOME="$(dirname "$(readlink -f $0)")"
 git clone https://github.com/fsquillace/junest.git ~/.local/share/junest
 ./.local/share/junest/bin/junest setup
 
-# ENABLE MULTILIB (optional)
+# ENABLE CHAOTIC-AUR
+./.local/share/junest/bin/junest -- sudo pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+./.local/share/junest/bin/junest -- sudo pacman-key --lsign-key 3056513887B78AEB
+./.local/share/junest/bin/junest -- sudo pacman --noconfirm -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+
+# ENABLE MULTILIB (optional) AND CHAOTIC-AUR
 echo "
 [multilib]
-Include = /etc/pacman.d/mirrorlist" >> ./.junest/etc/pacman.conf
+Include = /etc/pacman.d/mirrorlist
+
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist" >> ./.junest/etc/pacman.conf
 
 # CUSTOM MIRRORLIST, THIS SHOULD SPEEDUP THE INSTALLATION OF THE PACKAGES IN PACMAN (COMMENT EVERYTHING TO USE THE DEFAULT MIRROR)
 COUNTRY=$(curl -i ipinfo.io | grep country | cut -c 15- | cut -c -2)
