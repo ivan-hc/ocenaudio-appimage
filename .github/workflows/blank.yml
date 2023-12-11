@@ -20,13 +20,6 @@ jobs:
         wget https://raw.githubusercontent.com/ivan-hc/ocenaudio-appimage/main/ocenaudio.sh
         chmod a+x ./ocenaudio.sh
         ./ocenaudio.sh
-        mkdir tmp2
-        cd tmp2
-        wget https://raw.githubusercontent.com/ivan-hc/ocenaudio-appimage/main/ocenaudio-bin-junest.sh
-        chmod a+x ./ocenaudio-bin-junest.sh
-        ./ocenaudio-bin-junest.sh
-        cd ..
-        mv ./tmp2/*AppImage ./
         mkdir dist
         mv *AppImage dist/
     - uses: gautamkrishnar/keepalive-workflow@v1
