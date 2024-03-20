@@ -30,9 +30,9 @@ esac
 EOF
 chmod a+x ./ocenaudio.AppDir/AppRun
 # DOWNLOAD APPIMAGETOOL AND EXPORT THE DIRECTORY TO AN APPIMAGE
-wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$(uname -m).AppImage -O appimagetool
+wget -q $(wget -q https://api.github.com/repos/probonopd/go-appimage/releases -O - | grep -v zsync | grep -i continuous | grep -i appimagetool | grep -i x86_64 | grep browser_download_url | cut -d '"' -f 4 | head -1) -O appimagetool
 chmod a+x ./appimagetool
-ARCH=x86_64 ./appimagetool -n ./ocenaudio.AppDir
+ARCH=x86_64 VERSION=$(./appimagetool -v | grep -o '[[:digit:]]*') ./appimagetool -s ./ocenaudio.AppDir
 version=$(wget -q https://www.ocenaudio.com/fileinfo/ocenaudio_mint64.deb -O - | grep Versão | cut -c 43- | rev | cut -c 5- | rev)
 mv ocenaudio-x86_64.AppImage ocenaudio-$version-x86_64.AppImage
 rm -R -f ./tmp
