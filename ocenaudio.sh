@@ -4,7 +4,7 @@
 mkdir tmp
 cd tmp
 # DOWNLOAD THE OFFICIAL DEB PACKAGE
-wget https://www.ocenaudio.com/downloads/index.php/ocenaudio_debian9_64.deb
+wget "https://www.ocenaudio.com$(curl -Ls https://www.ocenaudio.com/download | tr '"' '\n' | grep -i "^/.*deb$" | head -1)"
 ar x ./*.deb
 tar -xf ./*tar.xz
 cd ..
