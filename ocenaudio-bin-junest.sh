@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 
 # NAME OF THE APP BY REPLACING "SAMPLE"
-APP=ocenaudio-bin
-BIN="ocenaudio"
-DEPENDENCES="ca-certificates " #SYNTAX: "APP1 APP2 APP3 APP4...", LEAVE BLANK IF NO OTHER DEPENDENCES ARE NEEDED
-BASICSTUFF="binutils debugedit gzip"
-COMPILERS="base-devel"
+APP=avidemux-qt
+BIN="avidemux*qt*"
+DEPENDENCES="ca-certificates qt5ct kvantum-qt5 avidemux-cli \
+ faac faad2 fribidi jack2 lame libass libdca libfdk-aac libpulse opencore-amr opus twolame x264 x265 xvidcore \
+ libxcursor qt5-svg qt5-x11extras \
+ libasyncns libsndfile libogg libvorbis flac mpg123 libva"
+#BASICSTUFF="binutils debugedit gzip"
+#COMPILERS="base-devel"
 
 # CREATE AND ENTER THE APPDIR
 if ! test -f ./appimagetool; then
@@ -47,7 +50,7 @@ function _bypass_signature_check_level() {
 
 function _pacman_patches() {
 	_enable_multilib
-	_enable_chaoticaur
+	###_enable_chaoticaur
 	_custom_mirrorlist
 	_bypass_signature_check_level
 }
@@ -114,7 +117,7 @@ function _backup_junest() {
 }
 
 ./.local/share/junest/bin/junest -- yay -Syy
-./.local/share/junest/bin/junest -- gpg --keyserver keyserver.ubuntu.com --recv-key C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF # UNCOMMENT IF YOU USE THE AUR
+#./.local/share/junest/bin/junest -- gpg --keyserver keyserver.ubuntu.com --recv-key C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF # UNCOMMENT IF YOU USE THE AUR
 if [ ! -z "$BASICSTUFF" ]; then
 	./.local/share/junest/bin/junest -- yay --noconfirm -S "$BASICSTUFF"
 fi
@@ -149,7 +152,7 @@ function _set_locale() {
 
 function _add_launcher_and_icon() {
 	rm -R -f ./*.desktop
-	LAUNCHER=$(grep -iRl $BIN ./.junest/usr/share/applications/* | grep ".desktop" | head -1)
+	LAUNCHER=$(grep -iRl avidemux ./.junest/usr/share/applications/* | grep ".desktop" | head -1)
 	cp -r "$LAUNCHER" ./
 	ICON=$(cat $LAUNCHER | grep "Icon=" | cut -c 6-)
 	cp -r ./.junest/usr/share/icons/*"$ICON"* ./ 2>/dev/null
@@ -202,6 +205,34 @@ function _create_AppRun() {
 	export JUNEST_HOME=$HERE/.junest
 	export PATH=$PATH:$HERE/.local/share/junest/bin
 
+	[ -z "$NVIDIA_ON" ] && NVIDIA_ON=0
+	if [ "$NVIDIA_ON" = 1 ]; then
+	   DATADIR="${XDG_DATA_HOME:-$HOME/.local/share}"
+	   CONTY_DIR="${DATADIR}/Conty/overlayfs_shared"
+	   [ -f /sys/module/nvidia/version ] && nvidia_driver_version="$(cat /sys/module/nvidia/version)"
+	   if [ -n "$nvidia_driver_version" ]; then
+	      mkdir -p "${CONTY_DIR}"/nvidia "${CONTY_DIR}"/up/usr/lib "${CONTY_DIR}"/up/usr/share
+	      nvidia_data_dirs="egl glvnd nvidia vulkan"
+	      for d in $nvidia_data_dirs; do [ ! -d "${CONTY_DIR}"/up/usr/share/"$d" ] && ln -s /usr/share/"$d" "${CONTY_DIR}"/up/usr/share/ 2>/dev/null; done
+	      [ ! -f "${CONTY_DIR}"/nvidia/current-nvidia-version ] && echo "${nvidia_driver_version}" > "${CONTY_DIR}"/nvidia/current-nvidia-version
+	      [ -f "${CONTY_DIR}"/nvidia/current-nvidia-version ] && nvidia_driver_conty=$(cat "${CONTY_DIR}"/nvidia/current-nvidia-version)
+	      if [ "${nvidia_driver_version}" != "${nvidia_driver_conty}" ]; then
+	         rm -f "${CONTY_DIR}"/up/usr/lib/*; echo "${nvidia_driver_version}" > "${CONTY_DIR}"/nvidia/current-nvidia-version
+	      fi
+	      /sbin/ldconfig -p > "${CONTY_DIR}"/nvidia/host_libs
+	      grep -i "nvidia\|libcuda" "${CONTY_DIR}"/nvidia/host_libs | cut -d ">" -f 2 > "${CONTY_DIR}"/nvidia/host_nvidia_libs
+	      libnv_paths=$(grep "libnv" "${CONTY_DIR}"/nvidia/host_libs | cut -d ">" -f 2)
+	      for f in $libnv_paths; do strings "${f}" | grep -qi -m 1 "nvidia" && echo "${f}" >> "${CONTY_DIR}"/nvidia/host_nvidia_libs; done
+	      nvidia_libs=$(cat "${CONTY_DIR}"/nvidia/host_nvidia_libs)
+	      for n in $nvidia_libs; do libname=$(echo "$n" | sed 's:.*/::') && [ ! -f "${CONTY_DIR}"/up/usr/lib/"$libname" ] && cp "$n" "${CONTY_DIR}"/up/usr/lib/; done
+	      libvdpau_nvidia="${CONTY_DIR}/up/usr/lib/libvdpau_nvidia.so"
+	      if ! test -f "${libvdpau_nvidia}*"; then cp "$(find /usr/lib -type f -name 'libvdpau_nvidia.so*' -print -quit 2>/dev/null | head -1)" "${CONTY_DIR}"/up/usr/lib/; fi
+	      [ -f "${libvdpau_nvidia}"."${nvidia_driver_version}" ] && [ ! -f "${libvdpau_nvidia}" ] && ln -s "${libvdpau_nvidia}"."${nvidia_driver_version}" "${libvdpau_nvidia}"
+	      [ -d "${CONTY_DIR}"/up/usr/lib ] && export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}":"${CONTY_DIR}"/up/usr/lib:"${LD_LIBRARY_PATH}"
+	      [ -d "${CONTY_DIR}"/up/usr/share ] && export XDG_DATA_DIRS="${XDG_DATA_DIRS}":"${CONTY_DIR}"/up/usr/share:"${XDG_DATA_DIRS}"
+	   fi
+	fi
+
 	BINDS=" --dev-bind /dev /dev \
 		--ro-bind /sys /sys \
 		--bind-try /tmp /tmp \
@@ -217,16 +248,17 @@ function _create_AppRun() {
 		--bind-try /media /media \
 		--bind-try /mnt /mnt \
 		--bind-try /opt /opt \
-		--bind-try /run/media /run/media \
+ 		--bind-try /run/media /run/media \
 		--bind-try /usr/lib/locale /usr/lib/locale \
 		--bind-try /usr/share/fonts /usr/share/fonts \
 		--bind-try /usr/share/themes /usr/share/themes \
 		--bind-try /var /var \
 		"
 
+	EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2- | sed -e 's|%.||g')
 	case "$1" in
-	   '') $HERE/.local/share/junest/bin/junest -n -b "$BINDS" -- /usr/share/ocenaudio/bin/ocenaudio "$@";;
-	   *) $HERE/.local/share/junest/bin/junest -n -b "$BINDS" -- /usr/share/ocenaudio/bin/ocenvst "$@";;
+	   '--cli'|'cli'|'--help'|'help'|'-h') $HERE/.local/share/junest/bin/junest -n -b "$BINDS" -- $CLI "$@";;
+	   ''|*) $HERE/.local/share/junest/bin/junest -n -b "$BINDS" -- $EXEC "$@";;
 	esac
 	HEREDOC
 	chmod a+x ./AppRun
@@ -360,6 +392,9 @@ function _savebins() {
 	mv ./"$APP".AppDir/.junest/usr/bin/sh ./save/
  	mv ./"$APP".AppDir/.junest/usr/bin/tr ./save/
    	mv ./"$APP".AppDir/.junest/usr/bin/tty ./save/
+   	mv ./"$APP".AppDir/.junest/usr/bin/cat ./save/
+   	mv ./"$APP".AppDir/.junest/usr/bin/chmod ./save/
+   	mv ./"$APP".AppDir/.junest/usr/bin/mkdir ./save/
 	for arg in $BINSAVED; do
 		mv ./"$APP".AppDir/.junest/usr/bin/*"$arg"* ./save/
 	done
@@ -503,37 +538,21 @@ function _rsync_dependences() {
 
 function _remove_more_bloatwares() {
 	_remove_some_bloatwares
- 	bins="bwrap bash sh env tr tty"
- 	mkdir -p ./save
- 	for b in $bins; do
- 		mv ./"$APP".AppDir/.junest/usr/bin/"$b" ./save/
- 	done
- 	rm -R -f ./"$APP".AppDir/.junest/usr/bin/*
- 	mv ./save/* ./"$APP".AppDir/.junest/usr/bin/
- 	rmdir ./save
  	rm -R -f ./"$APP".AppDir/.junest/etc/pacman*
  	rm -R -f ./"$APP".AppDir/.junest/home # remove the inbuilt home
+ 	rm -R -f ./"$APP".AppDir/.junest/usr/bin/qmake*
+ 	rm -R -f ./"$APP".AppDir/.junest/usr/lib/gconv
 	rm -R -f ./"$APP".AppDir/.junest/usr/lib/python*/__pycache__/* # if python is installed, removing this directory can save several megabytes
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/libLLVM* # included in the compilation phase, can sometimes be excluded for daily use
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/cmake
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/d*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/gconv
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/libgallium*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/libgo.so*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/libgphobos*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/libOS*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/libxatracker*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/o*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/s*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/t*
-	rm -R -f ./"$APP".AppDir/.junest/usr/lib/x*
-	rm -R -f ./"$APP".AppDir/.junest/usr/share/gir*
-	rm -R -f ./"$APP".AppDir/.junest/usr/share/i18n
-	rm -R -f ./"$APP".AppDir/.junest/usr/share/man
-	rm -R -f ./"$APP".AppDir/.junest/usr/share/mime
-	rm -R -f ./"$APP".AppDir/.junest/usr/share/vulkan
-	rm -R -f ./"$APP".AppDir/.junest/usr/share/wayland
-	rm -R -f ./"$APP".AppDir/.junest/usr/share/X11
+	#rm -R -f ./"$APP".AppDir/.junest/usr/lib/libLLVM* # included in the compilation phase, can sometimes be excluded for daily use
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/aclocal
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/applications
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/g*
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/i*
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/l*
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/m*
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/w*
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/x*
+	rm -R -f ./"$APP".AppDir/.junest/usr/share/z*
 }
 
 function _enable_mountpoints_for_the_inbuilt_bubblewrap() {
@@ -555,9 +574,6 @@ find ./"$APP".AppDir/.junest/usr/lib ./"$APP".AppDir/.junest/usr/lib32 -type f -
 find ./"$APP".AppDir/.junest/usr -type f -regex '.*\.so.*' -exec strip --strip-debug {} \;
 find ./"$APP".AppDir/.junest/usr/bin -type f ! -regex '.*\.so.*' -exec strip --strip-unneeded {} \;
 _enable_mountpoints_for_the_inbuilt_bubblewrap
-
-mv ./"$APP".AppDir/.junest/opt/ocenaudio ./"$APP".AppDir/.junest/usr/share/
-rm -R -f ./"$APP".AppDir/.junest/opt/*
 
 # CREATE THE APPIMAGE
 if test -f ./*.AppImage; then
