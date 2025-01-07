@@ -10,16 +10,15 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
 
     - name: build
       run: |
-        sudo apt update && sudo apt install libfuse2 desktop-file-utils
-        wget https://raw.githubusercontent.com/ivan-hc/ocenaudio-appimage/main/ocenaudio.sh
-        chmod a+x ./ocenaudio.sh
-        ./ocenaudio.sh
+        sudo apt update && sudo apt install desktop-file-utils
+        chmod a+x ./ocenaudio-bin-junest.sh
+        ./ocenaudio-bin-junest.sh
         mkdir dist
         mv *AppImage dist/
 
